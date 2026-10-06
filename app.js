@@ -19,7 +19,7 @@ let ruVoice = null;
 function loadVoices() { const v = (window.speechSynthesis && speechSynthesis.getVoices()) || []; ruVoice = v.find(x => /^ru/i.test(x.lang)) || null; }
 if (window.speechSynthesis) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 function speak(t) {
-  if (!window.speechSynthesis) return alert('Seu aparelho não tem áudio de voz.');
+  if (!window.speechSynthesis) return modal({ icon: '🔇', title: 'Sem áudio', text: 'Seu aparelho não tem áudio de voz.' });
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(t.replace(/[«»]/g, '')); u.lang = 'ru-RU'; if (ruVoice) u.voice = ruVoice; u.rate = .85;
   speechSynthesis.speak(u);
@@ -64,6 +64,18 @@ function confetti() {
     c.style.left = Math.random() * 100 + 'vw'; c.style.animationDuration = 2 + Math.random() * 2.5 + 's'; c.style.animationDelay = Math.random() * .8 + 's';
     document.body.appendChild(c); setTimeout(() => c.remove(), 5500);
   }
+}
+
+/* ---------- janelas (substituem alert/confirm) ---------- */
+function modal(o) {
+  return new Promise(res => {
+    const b = document.createElement('div'); b.className = 'mback';
+    b.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><div class="micon">${o.icon || doll({ mascot: true, size: 64 })}</div><h3>${o.title}</h3><p class="mut">${o.text}</p><div class="mbtns">${o.cancel ? `<button class="btn ghost" data-r="0">${o.cancel}</button>` : ''}<button class="btn ${o.danger ? 'red' : ''}" data-r="1">${o.ok || 'Entendi'}</button></div></div>`;
+    document.body.appendChild(b);
+    const close = v => { b.classList.add('out'); setTimeout(() => { b.remove(); res(v); }, 180); };
+    b.onclick = e => { if (e.target === b) close(false); };
+    b.querySelectorAll('[data-r]').forEach(x => x.onclick = () => close(x.dataset.r === '1'));
+  });
 }
 
 /* ---------- trilha ---------- */
@@ -277,7 +289,7 @@ function cfg() {
   `;
 }
 document.addEventListener('click', e => {
-  if (e.target.id === 'rs' && confirm('Tem certeza? Isso apaga todo o seu progresso.')) { S = Object.assign(blank(), { started: true }); save(); go('home'); }
+  if (e.target.id === 'rs') modal({ icon: '⚠️', title: 'Zerar o progresso?', text: 'Isso apaga todo o seu XP, sua sequência e suas lições neste aparelho.', ok: 'Zerar tudo', cancel: 'Cancelar', danger: true }).then(ok => { if (ok) { S = Object.assign(blank(), { started: true }); save(); go('home'); } });
   if (e.target.id === 'lo') { logout(); render(); }
 });
 function authView() {
@@ -294,7 +306,7 @@ document.addEventListener('click', async e => {
 function startLesson(i) { run = Object.assign(makeLesson(TRAIL[i]), { idx: i, step: 0, q: 0, hearts: 5, right: 0, wrong: 0, phase: 'steps' }); if (!run.steps.length) run.phase = 'q'; view = 'lesson'; render(); }
 function startReview() {
   const r = reviewLesson();
-  if (!r.Q.length) { alert('Nada para revisar agora. Faça mais lições e as palavras voltam aqui na hora certa.'); return; }
+  if (!r.Q.length) { modal({ icon: '🔁', title: 'Nada para revisar agora', text: 'Faça mais lições e as palavras voltam aqui na hora certa.' }); return; }
   run = Object.assign(r, { idx: -1, step: 0, q: 0, hearts: 5, right: 0, wrong: 0, phase: 'q' }); view = 'lesson'; render();
 }
 function lessonView() {
