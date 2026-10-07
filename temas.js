@@ -2,7 +2,7 @@
 (function () {
   const lg = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
   const sv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
-  let TEMA = lg('russo_tema', 'folk'), VOZ = lg('russo_voz', 'f');
+  let TEMA = lg('russo_tema', 'folk'), VOZ = lg('russo_voz', 'f'), VNOME = lg('russo_vnome', '');
   const TEMAS = {
     folk: ['Folk', 'Vinho, vermelho e dourado', 'linear-gradient(135deg,#c8102e 50%,#f0b429 50%)', '#160a10'],
     gzhel: ['Gzhel', 'Azul e branco, claro', 'linear-gradient(135deg,#1f46c8 50%,#ffffff 50%)', '#eaf0ff'],
@@ -46,8 +46,11 @@
   /* voz */
   const FEM = /milena|tat[iy]ana|svetlana|irina|kat[iy]a|anna|[yj]elena|elena|olga|alena|female|femin|жен/i;
   const MASC = /yuri|pavel|dmitr|maxim|ivan|aleks|alexand|\bmale\b|masc|муж/i;
+  const ruVozes = () => (window.speechSynthesis && speechSynthesis.getVoices() || []).filter(v => /^ru/i.test(v.lang));
   function escolheVoz() {
-    const vs = (window.speechSynthesis && speechSynthesis.getVoices() || []).filter(v => /^ru/i.test(v.lang));
+    const vs = ruVozes();
+    const pick = VNOME && vs.find(x => x.name === VNOME);
+    if (pick) return { v: pick, achou: true, manual: true };
     const re = VOZ === 'm' ? MASC : FEM, outra = VOZ === 'm' ? FEM : MASC;
     const v = vs.find(x => re.test(x.name)) || null;
     return { v: v || vs.find(x => !outra.test(x.name)) || vs[0] || null, achou: !!v };
@@ -57,7 +60,7 @@
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(String(t).replace(/[«»]/g, '')), r = escolheVoz();
     u.lang = 'ru-RU'; if (r.v) u.voice = r.v; u.rate = .85;
-    u.pitch = r.achou ? (VOZ === 'm' ? .9 : 1.05) : (VOZ === 'm' ? .55 : 1.2);
+    u.pitch = (r.manual || r.achou) ? 1 : (VOZ === 'm' ? .8 : 1.1);
     speechSynthesis.speak(u);
   };
 
@@ -67,14 +70,18 @@
     const t = Object.keys(TEMAS).map(k => `<button class="op ${k === TEMA ? 'on' : ''}" data-tema="${k}"><span class="sw" style="background:${TEMAS[k][2]}"></span><span><b>${TEMAS[k][0]}</b><small>${TEMAS[k][1]}</small></span></button>`).join('');
     const vz = `<button class="op ${VOZ === 'f' ? 'on' : ''}" data-voz="f">${dollOrig({ mascot: true, size: 44 })}<span><b>Voz feminina</b><small>Professora: a babushka, a matriarca</small></span></button>` +
       `<button class="op ${VOZ === 'm' ? 'on' : ''}" data-voz="m">${homem({ mascot: true, size: 44 })}<span><b>Voz masculina</b><small>Professor: um russo de ushanka e barba</small></span></button>`;
-    const extra = `<div class="card"><b>Tema do aplicativo</b><div class="opcoes">${t}</div></div><div class="card"><b>Voz e professor(a)</b><p class="mut small">A voz muda o áudio das palavras e quem ensina você no app.</p><div class="opcoes">${vz}</div><div style="height:10px"></div><button class="btn ghost" data-say="Здравствуйте! Меня зовут Иван.">🔊 Ouvir a voz escolhida</button></div>`;
+    let extra = `<div class="card"><b>Tema do aplicativo</b><div class="opcoes">${t}</div></div><div class="card"><b>Voz e professor(a)</b><p class="mut small">A voz muda o áudio das palavras e quem ensina você no app.</p><div class="opcoes">${vz}</div><div style="height:10px"></div><button class="btn ghost" data-say="Здравствуйте! Меня зовут Иван.">🔊 Ouvir a voz escolhida</button></div>`;
+    const vs = ruVozes();
+    const lista = vs.length ? vs.map((v, i) => `<button class="op ${v.name === VNOME ? 'on' : ''}" data-vname="${v.name.replace(/"/g, '')}"><span class="sw" style="background:linear-gradient(135deg,#c8102e,#f0b429)"></span><span><b>${v.name.replace(/</g, '')}</b><small>Toque para escolher e ouvir</small></span></button>`).join('') : '<p class="mut small">Nenhuma voz russa encontrada neste aparelho.</p>';
+    extra += `<div class="card"><b>Outras vozes deste aparelho</b><p class="mut small">Se a voz masculina soou estranha, escolha outra da lista. Para ter mais vozes, instale pacotes de voz russa em Configurações &gt; Idioma &gt; Conversão de texto em fala.</p><div class="opcoes">${lista}</div>${VNOME ? '<div style="height:10px"></div><button class="btn ghost" data-vname="">Voltar ao automático</button>' : ''}</div>`;
     return cfg0().replace('<div class="card"><b>Zerar progresso</b>', extra + '<div class="card"><b>Zerar progresso</b>');
   };
   document.addEventListener('click', e => {
-    const b = e.target.closest && e.target.closest('[data-tema],[data-voz]');
+    const b = e.target.closest && e.target.closest('[data-tema],[data-voz],[data-vname]');
     if (!b) return;
     if (b.dataset.tema) { TEMA = b.dataset.tema; sv('russo_tema', TEMA); aplicaTema(); }
-    if (b.dataset.voz) { VOZ = b.dataset.voz; sv('russo_voz', VOZ); }
+    if (b.dataset.voz) { VOZ = b.dataset.voz; sv('russo_voz', VOZ); VNOME = ''; sv('russo_vnome', ''); }
+    if (b.dataset.vname !== undefined) { VNOME = b.dataset.vname; sv('russo_vnome', VNOME); render(); if (VNOME) setTimeout(() => speak('Здравствуйте! Меня зовут Иван.'), 150); return; }
     render();
   });
   render();
