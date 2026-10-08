@@ -2,7 +2,10 @@
 (function () {
   const lg = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
   const sv = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  // Professor masculino DESLIGADO por enquanto (só a babushka ensina). Para voltar no futuro, troque para true.
+  const MASC_ATIVO = false;
   let TEMA = lg('russo_tema', 'folk'), VOZ = lg('russo_voz', 'f'), VNOME = lg('russo_vnome', '');
+  if (!MASC_ATIVO) VOZ = 'f';
   const TEMAS = {
     folk: ['Folk', 'Vinho, vermelho e dourado', 'linear-gradient(135deg,#c8102e 50%,#f0b429 50%)', '#160a10'],
     gzhel: ['Gzhel', 'Azul e branco, claro', 'linear-gradient(135deg,#1f46c8 50%,#ffffff 50%)', '#eaf0ff'],
@@ -68,20 +71,19 @@
   const cfg0 = cfg;
   cfg = function () {
     const t = Object.keys(TEMAS).map(k => `<button class="op ${k === TEMA ? 'on' : ''}" data-tema="${k}"><span class="sw" style="background:${TEMAS[k][2]}"></span><span><b>${TEMAS[k][0]}</b><small>${TEMAS[k][1]}</small></span></button>`).join('');
-    const vz = `<button class="op ${VOZ === 'f' ? 'on' : ''}" data-voz="f">${dollOrig({ mascot: true, size: 44 })}<span><b>Voz feminina</b><small>Professora: a babushka, a matriarca</small></span></button>` +
-      `<button class="op ${VOZ === 'm' ? 'on' : ''}" data-voz="m">${homem({ mascot: true, size: 44 })}<span><b>Voz masculina</b><small>Professor: um russo de ushanka e barba</small></span></button>`;
-    let extra = `<div class="card"><b>Tema do aplicativo</b><div class="opcoes">${t}</div></div><div class="card"><b>Voz e professor(a)</b><p class="mut small">A voz muda o áudio das palavras e quem ensina você no app.</p><div class="opcoes">${vz}</div><div style="height:10px"></div><button class="btn ghost" data-say="Здравствуйте! Меня зовут Иван.">🔊 Ouvir a voz escolhida</button></div>`;
+    const vz = `<button class="op ${VOZ === 'f' ? 'on' : ''}" data-voz="f">${dollOrig({ mascot: true, size: 44 })}<span><b>Voz feminina</b><small>Professora: a babushka, a matriarca</small></span></button>` + (MASC_ATIVO ? `<button class="op ${VOZ === 'm' ? 'on' : ''}" data-voz="m">${homem({ mascot: true, size: 44 })}<span><b>Voz masculina</b><small>Professor: um russo de ushanka e barba</small></span></button>` : '');
+    let extra = `<div class="card"><b>Tema do aplicativo</b><div class="opcoes">${t}</div></div><div class="card"><b>Voz e professor(a)</b><p class="mut small">A voz muda o áudio das palavras e quem ensina você no app.</p><div class="opcoes">${vz}</div><div style="height:10px"></div><button class="btn ghost" data-say="Здравствуйте! Меня зовут Анна.">🔊 Ouvir a voz escolhida</button></div>`;
     const vs = ruVozes();
     const lista = vs.length ? vs.map((v, i) => `<button class="op ${v.name === VNOME ? 'on' : ''}" data-vname="${v.name.replace(/"/g, '')}"><span class="sw" style="background:linear-gradient(135deg,#c8102e,#f0b429)"></span><span><b>${v.name.replace(/</g, '')}</b><small>Toque para escolher e ouvir</small></span></button>`).join('') : '<p class="mut small">Nenhuma voz russa encontrada neste aparelho.</p>';
-    extra += `<div class="card"><b>Outras vozes deste aparelho</b><p class="mut small">Se a voz masculina soou estranha, escolha outra da lista. Para ter mais vozes, instale pacotes de voz russa em Configurações &gt; Idioma &gt; Conversão de texto em fala.</p><div class="opcoes">${lista}</div>${VNOME ? '<div style="height:10px"></div><button class="btn ghost" data-vname="">Voltar ao automático</button>' : ''}</div>`;
+    extra += `<div class="card"><b>Outras vozes deste aparelho</b><p class="mut small">Se a voz soou estranha, escolha outra da lista. Para ter mais vozes, instale pacotes de voz russa em Configurações &gt; Idioma &gt; Conversão de texto em fala.</p><div class="opcoes">${lista}</div>${VNOME ? '<div style="height:10px"></div><button class="btn ghost" data-vname="">Voltar ao automático</button>' : ''}</div>`;
     return cfg0().replace('<div class="card"><b>Zerar progresso</b>', extra + '<div class="card"><b>Zerar progresso</b>');
   };
   document.addEventListener('click', e => {
     const b = e.target.closest && e.target.closest('[data-tema],[data-voz],[data-vname]');
     if (!b || b === document.documentElement) return;
     if (b.dataset.tema) { TEMA = b.dataset.tema; sv('russo_tema', TEMA); aplicaTema(); }
-    if (b.dataset.voz) { VOZ = b.dataset.voz; sv('russo_voz', VOZ); VNOME = ''; sv('russo_vnome', ''); }
-    if (b.dataset.vname !== undefined) { VNOME = b.dataset.vname; sv('russo_vnome', VNOME); render(); if (VNOME) setTimeout(() => speak('Здравствуйте! Меня зовут Иван.'), 150); return; }
+    if (b.dataset.voz) { VOZ = MASC_ATIVO ? b.dataset.voz : 'f'; sv('russo_voz', VOZ); VNOME = ''; sv('russo_vnome', ''); }
+    if (b.dataset.vname !== undefined) { VNOME = b.dataset.vname; sv('russo_vnome', VNOME); render(); if (VNOME) setTimeout(() => speak('Здравствуйте! Меня зовут Анна.'), 150); return; }
     render();
   });
   render();
